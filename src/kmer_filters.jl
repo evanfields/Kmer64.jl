@@ -20,7 +20,7 @@ struct KmerDataSet
     end
 end
 
-function member(v::UInt128, kds::KmerDataSet)
+@inline function member(v::UInt128, kds::KmerDataSet)
     return in(v % UInt64, kds.lower) && in(v, kds.full)
 end
 
