@@ -33,8 +33,8 @@ function next_kmer(kmer::Kmer, next_base::DNA)
         ((kmer.data << (empty_bits + 0x2)) >> empty_bits) | _nuc_to_bits(next_base)
     )
 end
-function _next_data(kdata::UInt128, next_base::DNA, empty_bits::UInt8)
-    return ((kdata << (empty_bits + 0x2)) >> empty_bits) | _nuc_to_bits(next_base)
+function _next_data(kdata::UInt128, next_base::DNA, relevant_bits_mask)
+    return ((kdata << 0x2) & relevant_bits_mask) | _nuc_to_bits(next_base)
 end
 
 @inline function _nuc_to_bits(nuc::DNA)::UInt8

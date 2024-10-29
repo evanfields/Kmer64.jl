@@ -55,50 +55,36 @@ function filter_reads(reads, query; k::Int = 40, check_rc = true)
     end
 end
 
-"""Whether any kmer in `seq` is in `kmer_set`, where `kmer_set` contains just the data
-UInt128 of a set of kmers.
-!!! `seq` must not contain any ambiguities!"""
-function _unambiguous_seq_has_kmer(seq, kmer_set::KmerDataSet, k)
-    @debug "In _unambiguous_seq_has_kmer" seq.part # to-do: remove after development! Causes allocation?!
-    length(seq) < k && return false
-    kmer = Kmer(@view seq[1:k]).data
-    empty_bits = 0x80 - ((k % UInt8) << 0x1)
-    member(kmer, kmer_set) && return true
-    for next_base in (@view seq[k + 1 : end])
-        kmer = _next_data(kmer, next_base, empty_bits)
-        member(kmer, kmer_set) && return true
-    end
-    return false
-end
-
-"""Check whether a sequence has a kmer in kmer_set. Do not form/check kmers that would
-contain ambiguous bases. For performance, `kmer_set` should contain just the UInt128 data
-of the query kmers."""
 function _seq_has_kmer(seq::LongDNA{4}, kmer_set::KmerDataSet, k)
-    # We cannot form any kmers with ambiguous bases, so we find unambiguous chunks
-    # and process each chunk in turn.
-    # Plausibly this is not perfect for cache locality: suppose the read is long but
-    # unambiguous. Then we walk the read once to confirm it's unambiguous and then again to
-    # actually check kmers. Checking for ambiguity right where we form kmers might be better,
-    # but definitely messier. Possibly this doesn't matter in practice if seq is a 150bp
-    # read and the entire thing easily fits in cache.
-    next_ind = 1 # index of the start of the next kmer to check
-    while next_ind <= length(seq) - k + 1
-        next_ambiguity_ind = findnext(isambiguous, seq, next_ind)
-        if isnothing(next_ambiguity_ind) # no more ambiguities
-            return _unambiguous_seq_has_kmer((@view seq[next_ind : end]), kmer_set, k)
-        elseif next_ambiguity_ind >= next_ind + k
-            # the next unambiguous chunk has room to form kmers
-            next_chunk_hits = _unambiguous_seq_has_kmer(
-                (@view seq[next_ind : (next_ambiguity_ind - 1)]),
-                kmer_set,
-                k
-            )
-            next_chunk_hits && return true
+    length(seq) < k && return false
+    
+    # Initialize variables for building kmers incrementally
+    empty_bits = 0x80 - ((k % UInt8) << 0x1)
+    relevant_bits_mask = typemax(UInt128) >> empty_bits
+    kmer_data = zero(UInt128)
+    current_bases = 0
+    
+    # Process all bases in a single pass
+    
+    @inbounds for i in 1:length(seq)
+        base = seq[i]
+        if isambiguous(base)
+            current_bases = 0
+            kmer_data = zero(UInt128)
+            continue
         end
-        # didn't find a kmer hit, need to keep looking
-        next_ind = next_ambiguity_ind + 1
+        
+        # Always use _next_data - when current_bases is 0 this is equivalent to
+        # starting fresh since kmer_data is zero
+        kmer_data = _next_data(kmer_data, base, relevant_bits_mask)
+        current_bases += 1
+            
+        # Only check membership once we have a complete kmer
+        if current_bases >= k && member(kmer_data, kmer_set)
+            return true
+        end
     end
+    
     return false
 end
 
