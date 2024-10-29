@@ -1,0 +1,7 @@
+name = "Kmer64CLI"
+uuid = "c9568678-e9a0-4c59-bd7d-be24a6938a83"
+authors = ["Evan Fields <evanjeromefields@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+Kmer64 = "561d3a58-5931-4a81-8b01-8e534be48c8b"

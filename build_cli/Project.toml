@@ -1,0 +1,3 @@
+[deps]
+Kmer64CLI = "c9568678-e9a0-4c59-bd7d-be24a6938a83"
+PackageCompiler = "9b87118b-4619-50d2-8e1e-99f35a4d4d9d"

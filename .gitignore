@@ -1,0 +1,4 @@
+.vscode/**
+**.swp
+**Manifest.toml
+build_cli/Kmer64CLI_app/**
