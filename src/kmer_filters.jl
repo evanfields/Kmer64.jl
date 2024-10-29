@@ -61,11 +61,12 @@ UInt128 of a set of kmers.
 function _unambiguous_seq_has_kmer(seq, kmer_set::KmerDataSet, k)
     @debug "In _unambiguous_seq_has_kmer" seq.part # to-do: remove after development! Causes allocation?!
     length(seq) < k && return false
-    kmer = Kmer(@view seq[1:k])
-    member(kmer.data, kmer_set) && return true
+    kmer = Kmer(@view seq[1:k]).data
+    empty_bits = 0x80 - ((k % UInt8) << 0x1)
+    member(kmer, kmer_set) && return true
     for next_base in (@view seq[k + 1 : end])
-        kmer = next_kmer(kmer, next_base)
-        member(kmer.data, kmer_set) && return true
+        kmer = _next_data(kmer, next_base, empty_bits)
+        member(kmer, kmer_set) && return true
     end
     return false
 end
