@@ -65,7 +65,7 @@ function _seq_has_kmer(seq::LongDNA{4}, kmer_set::KmerDataSet, k)
     current_bases = 0
     
     # Process all bases in a single pass
-    
+
     @inbounds for i in 1:length(seq)
         base = seq[i]
         if isambiguous(base)
@@ -109,7 +109,14 @@ function filter_read_file(fastq_path, query_fasta_path; k::Int = 40, check_rc = 
     end
 end
 
-function filter_paired_reads(reads1_path, reads2_path, query_fasta_path; k::Int = 40, check_rc = true)
+function filter_paired_reads(
+    reads1_path,
+    reads2_path,
+    query_fasta_path,
+    out1_path, out2_path;
+    k::Int = 40,
+    check_rc = true
+)
     kmer_set = _prepare_query_kmers(query_fasta_path, k, check_rc)
     hits = Vector{Tuple{FASTQRecord, FASTQRecord}}()
     open(FASTQReader, reads1_path) do reader1
@@ -124,9 +131,30 @@ function filter_paired_reads(reads1_path, reads2_path, query_fasta_path; k::Int 
             end
         end
     end
-    return hits
+    return write_fastq_pairs(hits, out1_path, out2_path)
 end
 
+"""Write pairs of fastq records to a pair of file paths. If either path is Nothing or empty,
+return without writing. Return the number of records written."""
+function write_fastq_pairs(pairs, path1, path2)
+    if isnothing(path1) || isnothing(path2) || isempty(path1) || isempty(path2)
+        return 0
+    end
+    written = 0
+    open(FASTQWriter, path1) do writer1
+        open(FASTQWriter, path2) do writer2
+            for (rec1, rec2) in pairs
+                write(writer1, rec1)
+                write(writer2, rec2)
+                written += 1
+            end
+        end
+    end
+    return written
+end
+
+
+"""Filter an interable of FASTQRecords for those that contain a kmer in kmer_set."""
 function _filter_hits(records, kmer_set, k)
     hits = FASTQRecord[]
     for rec in records

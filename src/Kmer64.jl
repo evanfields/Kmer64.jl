@@ -7,6 +7,7 @@ using FASTX
 import Base: hash
 
 include("kmer_filters.jl")
+include("parallelize.jl")
 
 struct Kmer
     length::UInt8
