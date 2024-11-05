@@ -20,6 +20,8 @@ struct KmerDataSet
     end
 end
 
+const ReadPair = Tuple{FASTQRecord, FASTQRecord}
+
 @inline function member(v::UInt128, kds::KmerDataSet)
     return in(v % UInt64, kds.lower) && in(v, kds.full)
 end
@@ -113,7 +115,8 @@ function filter_paired_reads(
     reads1_path,
     reads2_path,
     query_fasta_path,
-    out1_path, out2_path;
+    out1_path,
+    out2_path;
     k::Int = 40,
     check_rc = true
 )
