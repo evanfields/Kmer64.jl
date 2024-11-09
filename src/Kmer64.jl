@@ -38,13 +38,19 @@ function _next_data(kdata::UInt128, next_base::DNA, relevant_bits_mask)
     return ((kdata << 0x2) & relevant_bits_mask) | _nuc_to_bits(next_base)
 end
 
+
+const n2ba = Vector{UInt8}(undef, 8)
+n2ba[reinterpret(UInt8, DNA_A)] = 0b00
+n2ba[reinterpret(UInt8, DNA_T)] = 0b11
+n2ba[reinterpret(UInt8, DNA_G)] = 0b01
+n2ba[reinterpret(UInt8, DNA_C)] = 0b10
+
+"""Convert a non-ambiguous DNA (G/A/T/C) to UInt8 representation.
+!!! Unsafe! Will produce wrong answers or crashes if you call with any other DNA symbol."""
 @inline function _nuc_to_bits(nuc::DNA)::UInt8
-    nuc == DNA_A && return 0b00
-    nuc == DNA_T && return 0b11
-    nuc == DNA_G && return 0b01
-    nuc == DNA_C && return 0b10
-    error("non-GATC base pased to _nuc_to_bits")
+    return @inbounds n2ba[reinterpret(UInt8, nuc)]
 end
+
 @inline function int_to_nuc(i)
     i == 0 && return DNA_A
     i == 3 && return DNA_T

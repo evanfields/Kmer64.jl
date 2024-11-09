@@ -26,14 +26,19 @@ function julia_main()::Cint
         check_rc = length(ARGS) >= 7 ? parse(Bool, ARGS[7]) : false
         
         # Call the filter function
-        hits = Kmer64.filter_paired_reads(
-            reads1_path, reads2_path,
-            query_path,
-            out1_path, out2_path;
-            k=k, check_rc=check_rc
-        )
+        filter_fun = Threads.nthreads() > 1 ? Kmer64.filter_paired_reads_threaded : Kmer64.filter_paired_reads
+        println("Detected $(Threads.nthreads()) threads.")
+        filter_time = @elapsed begin
+            n_hits = filter_fun(
+                reads1_path, reads2_path,
+                query_path,
+                out1_path, out2_path;
+                k=k, check_rc=check_rc
+            )
+        end
+        println("Filter time: $(filter_time) seconds")
         
-        println("Wrote $(length(hits)) read pairs containing query kmers")
+        println("Wrote $(n_hits) read pairs containing query kmers")
         
         return 0
     catch e

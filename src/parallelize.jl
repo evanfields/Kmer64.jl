@@ -47,8 +47,7 @@ function filter_paired_reads_threaded(
         end
     end
     close(chunkwise_results) # we put! all the chunkwise channels already
-    wait(writer_task)
-    return nothing
+    return fetch(writer_task)
 end
 
 """Extract matching read pairs from a ReadPair iterable `read_pairs` and `put!` them in a
