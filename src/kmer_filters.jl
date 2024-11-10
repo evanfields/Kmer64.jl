@@ -1,5 +1,14 @@
-"""Struct to hold UInt128 data of a set of fixed-width kmers; optimized for membership
-tests with low hit rates."""
+"""
+    KmerDataSet
+
+Struct to hold UInt128 data of a set of fixed-width kmers; optimized for membership
+tests with low hit rates. Uses a two-tier lookup structure to optimize the common
+case where most membership tests fail.
+
+Implementation
+- `lower`: Set of UInt64s containing truncated kmer representations 
+- `full`: Set of UInt128s containing complete kmer data.
+"""
 struct KmerDataSet
     lower::Set{UInt64}
     full::Set{UInt128}
@@ -57,6 +66,14 @@ function filter_reads(reads, query; k::Int = 40, check_rc = true)
     end
 end
 
+"""
+Test whether a DNA sequence contains any kmer present in a KmerDataSet. Process sequence in a
+single pass, building kmers incrementally and handling ambiguous bases. Return early on first
+match found.
+
+Note: Assumes k ≤ 64 and that kmers in kmer_set were constructed using the same k value.
+For longer kmers, behavior is undefined.
+"""
 function _seq_has_kmer(seq::LongDNA{4}, kmer_set::KmerDataSet, k)
     length(seq) < k && return false
     

@@ -22,8 +22,28 @@ function chunk_starts(file, n; min_chunk_bytes = 300_000)
 end
 
 
-"""Threaded filtering of paired reads. The main function body spawns threads to process
-chunks of read pairs."""
+"""
+    filter_paired_reads_threaded(reads1_path, reads2_path, query_fasta_path, 
+                               out1_path, out2_path; k=40, check_rc=true, chunk_size=32)
+
+Parallel version of read pair filtering. Identifies read pairs where either read contains
+an exact match to any k-length subsequence from the query sequence.
+
+# Arguments
+- `reads1_path`: Path to FASTQ file containing first reads of pairs
+- `reads2_path`: Path to FASTQ file containing second reads of pairs
+- `query_fasta_path`: Path to FASTA file containing query sequence
+- `out1_path`: Output path for filtered first reads
+- `out2_path`: Output path for filtered second reads
+- `k=40`: Length of kmers to match (must be ≤ 64)
+- `check_rc=true`: Whether to also match reverse complements of query kmers
+- `chunk_size=32`: Number of read pairs to process in each parallel task
+
+# Returns
+Number of read pairs written to output files.
+
+Performance scales with available threads (set via JULIA_NUM_THREADS).
+"""
 function filter_paired_reads_threaded(
     reads1_path,
     reads2_path,

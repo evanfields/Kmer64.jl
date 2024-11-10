@@ -16,6 +16,20 @@ end
 Base.hash(k::Kmer, h::UInt) = hash(k.data, hash(k.length, h))
 # == already correctly falls back to ===
 
+"""
+    Kmer(seq::DNASeq)
+
+Construct a fixed-width kmer from a DNA sequence.
+
+# Arguments
+- `seq`: DNA sequence to convert to kmer representation
+ 
+# Throws
+- `ErrorException` if sequence length exceeds 64 bases
+- `ErrorException` if sequence contains ambiguous bases
+
+Internally stores sequence in a compact 2-bit-per-base format.
+"""
 function Kmer(seq::DNASeq)
     length(seq) <= 64 || error("Can't build Kmer with more than 64 bases.")
     x = zero(UInt128)
@@ -25,8 +39,16 @@ function Kmer(seq::DNASeq)
     return Kmer(length(seq), x)
 end
 
-"""Compute the kmer formed by taking the last k-1 bases from `kmer` and
-concatenating `next_base`."""
+"""
+    next_kmer(kmer::Kmer, next_base::DNA)
+
+Efficiently compute the next kmer in a sequence by shifting out the oldest base
+and incorporating next_base. Length of the kmer remains unchanged.
+
+E.g.:
+Kmer(dna"ACGT"): 0b...00100111
+next_kmer(_, DNA_A): 0b...10011100
+"""
 function next_kmer(kmer::Kmer, next_base::DNA)
     empty_bits = 0x80 - (kmer.length << 0x1)
     return Kmer(
