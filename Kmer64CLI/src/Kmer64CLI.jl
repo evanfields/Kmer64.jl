@@ -9,19 +9,11 @@ using ArgParse
 Parse command-line arguments for using Kmer64 as a kmer filter, returning the parsed arguments as a Dict.
 """
 function parse_commandline()
-    # Get version from Project.toml if available
-    version = try
-        using Pkg
-        pkg_info = Pkg.project().dependencies["Kmer64"]
-        pkg_info.version
-    catch
-        nothing  # Disable version if we can't find it
-    end
     
     s = ArgParseSettings(
         description = "Filter paired-end FASTQ files to find reads containing specific k-mers.",
-        version = version,
-        add_version = !isnothing(version)
+        version = "0.0.1",
+        add_version = true
     )
 
     @add_arg_table! s begin
@@ -34,10 +26,10 @@ function parse_commandline()
         "--query", "-q"
             help = "Path to FASTA file containing query sequence"
             required = true
-        "--output1", "-o"
+        "--out1", "-o"
             help = "Output path for filtered first reads"
             required = true
-        "--output2", "-O"
+        "--out2", "-O"
             help = "Output path for filtered second reads"
             required = true
         "--kmer-length", "-k"
@@ -45,15 +37,11 @@ function parse_commandline()
             arg_type = Int
             default = 40
         "--check-rc"
-            help = "Also check reverse complement sequences"
+            help = "Also check reads for reverse complement of query kmers"
             action = :store_true
-        "--sequential"
+        "--single-thread"
             help = "Force single-threaded execution even if multiple threads are available"
             action = :store_true
-        "--chunk-size"
-            help = "Number of read pairs to process in each chunk (multithreading only)"
-            arg_type = Int
-            default = 32
         "--force", "-f"
             help = "Overwrite output files if they already exist"
             action = :store_true
@@ -84,13 +72,8 @@ function validate_args(args::Dict)
         error("k-mer length must be between 1 and 64")
     end
 
-    # Check that chunk size is positive
-    if args["chunk-size"] < 1
-        error("chunk size must be positive")
-    end
-
     # Check output paths
-    for outfile in [args["output1"], args["output2"]]
+    for outfile in [args["out1"], args["out2"]]
         # Check that output directory exists
         outdir = dirname(abspath(outfile))
         if !isdir(outdir)
@@ -129,10 +112,9 @@ function julia_main()::Cint
             n_hits = filter_fun(
                 args["reads1"], args["reads2"],
                 args["query"],
-                args["output1"], args["output2"];
+                args["out1"], args["out2"];
                 k = args["kmer-length"],
-                check_rc = args["check_rc"],
-                chunk_size = args["chunk_size"]
+                check_rc = args["check-rc"],
             )
         end
         

@@ -4,7 +4,7 @@ using BioSymbols: DNA, DNA_A, DNA_G, DNA_C, DNA_T, NucleicAcid
 using BioSequences: LongDNA, DNASeq, BioSequences, isambiguous, hasambiguity
 
 using FASTX
-import Base: hash
+import Base: hash, show
 
 include("kmer_filters.jl")
 include("parallelize.jl")
@@ -15,6 +15,9 @@ struct Kmer
 end
 Base.hash(k::Kmer, h::UInt) = hash(k.data, hash(k.length, h))
 # == already correctly falls back to ===
+function Base.show(io::IO, kmer::Kmer)
+    print(io, "$(kmer.length)-mer\"$(to_dna(kmer))\"")
+end
 
 """
     Kmer(seq::DNASeq)
@@ -88,7 +91,7 @@ function to_dna(kmer::Kmer)
         push!(letters, int_to_nuc(x & 0b11))
         x = x >> 2
     end
-    return reverse(letters)
+    return LongDNA{2}(reverse(letters))
 end
 
 function reverse_2bit_chunks(x::UInt128)

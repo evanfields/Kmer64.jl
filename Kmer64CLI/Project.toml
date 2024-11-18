@@ -4,4 +4,8 @@ authors = ["Evan Fields <evanjeromefields@gmail.com>"]
 version = "0.1.0"
 
 [deps]
+ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
 Kmer64 = "561d3a58-5931-4a81-8b01-8e534be48c8b"
+
+[compat]
+ArgParse = "1.2.0"

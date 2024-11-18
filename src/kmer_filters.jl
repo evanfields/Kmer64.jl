@@ -41,7 +41,7 @@ function kmer_list(seq::DNASeq, k = 40)
         error("Cannot construct kmers from a sequence with ambiguity.")
     end
     kmers = Kmer[]
-    if length(seq) < 40
+    if length(seq) < k
         return kmers
     end
     push!(kmers, Kmer(@view seq[1:k]))
@@ -107,19 +107,27 @@ function _seq_has_kmer(seq::LongDNA{4}, kmer_set::KmerDataSet, k)
     return false
 end
 
+"""Extract query kmers from a fasta file, validate they have no ambiguous bases, and
+return a KmerDataSet for read filtering."""
 function _prepare_query_kmers(query_fasta_path, k::Int, check_rc::Bool)
-    query = open(FASTAReader, query_fasta_path) do reader
-        sequence(LongDNA{2}, first(reader))
+    queries = open(FASTAReader, query_fasta_path) do reader
+        map(reader) do rec
+            seq = sequence(LongDNA{4}, rec)
+            if hasambiguity(seq)
+                error("Query sequence may not have ambiguous bases.")
+            end
+            seq_unambig = LongDNA{2}(seq)
+            seq_kmers = kmer_list(seq_unambig, k)
+            if check_rc
+                seq_kmers = vcat(seq_kmers, reverse_complement.(seq_kmers))
+            end
+            return seq_kmers
+        end
     end
-    if hasambiguity(query)
-        error("Query sequence may not have ambiguous bases.")
-    end
-    query_kmers = kmer_list(query, k)
-    if check_rc
-        query_kmers = vcat(query_kmers, reverse_complement.(query_kmers))
-    end
-    return KmerDataSet(k.data for k in query_kmers)
+    return KmerDataSet(k.data for k in reduce(vcat, queries))
 end
+
+"""Filter a file of unpaired reads. Needs updating."""
 function filter_read_file(fastq_path, query_fasta_path; k::Int = 40, check_rc = true)
     kmer_set = _prepare_query_kmers(query_fasta_path, k, check_rc)
 
