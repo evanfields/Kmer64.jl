@@ -18,6 +18,7 @@ function next_rec_start_pos!(io; max_lines = 50)
     error("No @ on a newline found in 50 lines from position $(init_pos)")
 end
 
+# todo
 function chunk_starts(file, n; min_chunk_bytes = 300_000)
 end
 
@@ -54,14 +55,20 @@ function filter_paired_reads_threaded(
     check_rc = true,
     chunk_size = 32
 )
-    kmer_set = _prepare_query_kmers(query_fasta_path, k, check_rc)
+    fwd_kmerset, rev_kmerset = _prepare_query_kmers(query_fasta_path, k, check_rc)
     chunkwise_results = Channel{Channel{ReadPair}}(256) # good channel size?
     writer_task = Threads.@spawn write_fastq_pairs(chunkwise_results, out1_path, out2_path)
     open(FASTQReader, reads1_path) do reader1
         open(FASTQReader, reads2_path) do reader2
             for chunk in Iterators.partition(zip(reader1, reader2), chunk_size)
                 chunk_channel = Channel{ReadPair}(chunk_size)
-                Threads.@spawn _filter_chunk!(chunk_channel, chunk, kmer_set, k)
+                Threads.@spawn _filter_chunk!(
+                    chunk_channel,
+                    chunk,
+                    fwd_kmerset,
+                    rev_kmerset,
+                    k
+                )
                 put!(chunkwise_results, chunk_channel)
             end
         end
@@ -72,11 +79,11 @@ end
 
 """Extract matching read pairs from a ReadPair iterable `read_pairs` and `put!` them in a
 Channel, then close the Channel"""
-function _filter_chunk!(chunk_channel, read_pairs, kmer_set, k)
+function _filter_chunk!(chunk_channel, read_pairs, fwd_kmerset, rev_kmerset, k)
     for (rec1, rec2) in read_pairs
         if (
-            _seq_has_kmer(sequence(LongDNA{4}, rec1), kmer_set, k) ||
-            _seq_has_kmer(sequence(LongDNA{4}, rec2), kmer_set, k)
+            _seq_has_kmer(sequence(LongDNA{4}, rec1), fwd_kmerset, k) ||
+            _seq_has_kmer(sequence(LongDNA{4}, rec2), rev_kmerset, k)
         )
             put!(chunk_channel, (rec1, rec2))
         end

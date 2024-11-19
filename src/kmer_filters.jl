@@ -108,28 +108,37 @@ function _seq_has_kmer(seq::LongDNA{4}, kmer_set::KmerDataSet, k)
 end
 
 """Extract query kmers from a fasta file, validate they have no ambiguous bases, and
-return a KmerDataSet for read filtering."""
+return a KmerDataSet for read filtering. Return a pair
+`(forward_KmerDataSet, rc_KmerDataSet)`. If `check_rc`, both element are the
+same KmerDataSet which contains data for kmers in both forward and RC orientation."""
 function _prepare_query_kmers(query_fasta_path, k::Int, check_rc::Bool)
-    queries = open(FASTAReader, query_fasta_path) do reader
-        map(reader) do rec
+    fwd_kmers = open(FASTAReader, query_fasta_path) do reader
+        seqwise_kmers = map(reader) do rec
             seq = sequence(LongDNA{4}, rec)
             if hasambiguity(seq)
                 error("Query sequence may not have ambiguous bases.")
             end
             seq_unambig = LongDNA{2}(seq)
             seq_kmers = kmer_list(seq_unambig, k)
-            if check_rc
-                seq_kmers = vcat(seq_kmers, reverse_complement.(seq_kmers))
-            end
             return seq_kmers
         end
+        return reduce(vcat, seqwise_kmers)
     end
-    return KmerDataSet(k.data for k in reduce(vcat, queries))
+    if check_rc
+        kmers = vcat(fwd_kmers, reverse_complement.(fwd_kmers))
+        kds = KmerDataSet(k.data for k in kmers)
+        return (kds, kds)
+    else # handle fwd and RC orientations separately
+        return (
+            KmerDataSet(k.data for k in fwd_kmers),
+            KmerDataSet(k.data for k in reverse_complement.(fwd_kmers))
+        )
+    end
 end
 
 """Filter a file of unpaired reads. Needs updating."""
 function filter_read_file(fastq_path, query_fasta_path; k::Int = 40, check_rc = true)
-    kmer_set = _prepare_query_kmers(query_fasta_path, k, check_rc)
+    kmer_set = _prepare_query_kmers(query_fasta_path, k, check_rc)[1]
 
     return open(FASTQReader, fastq_path) do reader
         return _filter_hits(reader, kmer_set, k)
@@ -145,14 +154,14 @@ function filter_paired_reads(
     k::Int = 40,
     check_rc = true
 )
-    kmer_set = _prepare_query_kmers(query_fasta_path, k, check_rc)
+    fwd_kmerset, rev_kmerset = _prepare_query_kmers(query_fasta_path, k, check_rc)
     hits = Vector{Tuple{FASTQRecord, FASTQRecord}}()
     open(FASTQReader, reads1_path) do reader1
         open(FASTQReader, reads2_path) do reader2
             for (rec1, rec2) in zip(reader1, reader2)
                 if (
-                    _seq_has_kmer(sequence(LongDNA{4}, rec1), kmer_set, k) ||
-                    _seq_has_kmer(sequence(LongDNA{4}, rec2), kmer_set, k)
+                    _seq_has_kmer(sequence(LongDNA{4}, rec1), fwd_kmerset, k) ||
+                    _seq_has_kmer(sequence(LongDNA{4}, rec2), rev_kmerset, k)
                 )
                     push!(hits, (rec1, rec2))
                 end
