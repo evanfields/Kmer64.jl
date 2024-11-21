@@ -4,10 +4,11 @@ using BioSymbols: DNA, DNA_A, DNA_G, DNA_C, DNA_T, NucleicAcid
 using BioSequences: LongDNA, DNASeq, BioSequences, isambiguous, hasambiguity
 
 using FASTX
-import Base: hash, show
+import Base: hash, show, iterate
 
 include("kmer_filters.jl")
 include("parallelize.jl")
+include("threaded_partition.jl")
 
 struct Kmer
     length::UInt8

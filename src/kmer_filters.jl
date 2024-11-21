@@ -21,8 +21,9 @@ struct KmerDataSet
         # sets are Dict backed, big size hint seems to improve haskey performance
         dict_size = max(
             length(vals),
-            min(2^14, 12 * length(vals))
+            min(2^14, 20 * length(vals))
         )
+        # from sizehint! implementation, this should trigger rehashing
         sizehint!(kds.lower.dict, dict_size)
         sizehint!(kds.full.dict, dict_size)
         return kds
