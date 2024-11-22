@@ -119,7 +119,7 @@ function julia_main()::Cint
         end
         
         # Report results
-        println("Filter completed in $(round(filter_time; digits=1)) seconds")
+        println("Filter completed in $(round(filter_time; digits=2)) seconds")
         println("Wrote $n_hits read pairs containing query k-mers")
         
         return 0

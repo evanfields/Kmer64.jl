@@ -56,3 +56,6 @@ precompile(Tuple{typeof(Base.indexed_iterate), Tuple{Char, Int64}, Int64, Int64}
 precompile(Tuple{typeof(Base._any), ArgParse.var"#74#75"{String}, Array{AbstractString, 1}, Base.Colon})
 precompile(Tuple{ArgParse.var"#74#75"{String}, Any})
 precompile(Tuple{Base.var"#743#744"{Base.Channel{Any}, Task}})
+precompile(Tuple{typeof(Core.kwcall), NamedTuple{(:k, :check_rc), Tuple{Int64, Bool}}, typeof(Kmer64.filter_paired_reads), Vararg{String, 5}})
+precompile(Tuple{Kmer64.var"#31#35"{String, String, Base.Channel{Base.Channel{Tuple{FASTX.FASTQ.Record, FASTX.FASTQ.Record}}}}})
+precompile(Tuple{Kmer64.var"#34#38"{Array{Tuple{FASTX.FASTQ.Record, FASTX.FASTQ.Record}, 1}, Base.Channel{Tuple{FASTX.FASTQ.Record, FASTX.FASTQ.Record}}, Int64, Kmer64.KmerDataSet, Kmer64.KmerDataSet}})
